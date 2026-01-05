@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSX Explorer</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    color: #4a90e2;
+  }
+  #fileTree {
+    max-width: 800px;
+    margin: 20px auto;
+  }
+  details {
+    margin-left: 20px;
+  }
+  a {
+    color: #4a90e2;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+<h1>HSX File Explorer</h1>
+<div id="fileTree">Loading files...</div>
+
+<script>
+async function fetchRepoFiles() {
+  const res = await fetch('/api/files');
+  const files = await res.json();
+  return files;
+}
+
+function buildTree(files) {
+  const tree = {};
+  files.forEach(file => {
+    const parts = file.path.split('/');
+    let current = tree;
+    parts.forEach((part, i) => {
+      if (i === parts.length - 1) {
+        current[part] = file;
+      } else {
+        if (!current[part]) current[part] = {};
+        current = current[part];
+      }
+    });
+  });
+  return tree;
+}
+
+function rawURL(path) {
+  return `https://raw.githubusercontent.com/sussybocca/.HSX/main/${path}`;
+}
+
+function renderTree(node, container) {
+  Object.keys(node).forEach(key => {
+    const item = node[key];
+    if (item.path) {
+      const a = document.createElement('a');
+      a.href = rawURL(item.path);
+      a.download = key;
+      a.textContent = key;
+      container.appendChild(a);
+      container.appendChild(document.createElement('br'));
+    } else {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.textContent = key;
+      details.appendChild(summary);
+      renderTree(item, details);
+      container.appendChild(details);
+    }
+  });
+}
+
+fetchRepoFiles()
+  .then(files => {
+    const tree = buildTree(files);
+    const container = document.getElementById('fileTree');
+    container.innerHTML = '';
+    renderTree(tree, container);
+  })
+  .catch(err => {
+    document.getElementById('fileTree').textContent = 'Failed to load files';
+    console.error(err);
+  });
+</script>
+</body>
+</html>
